@@ -447,7 +447,6 @@ function renderPropertyCards(targetProperties) {
         var badgeBg = (prop.price.indexOf("전세") !== -1) ? "#1B5E20" : (prop.price.indexOf("월세") !== -1) ? "#ff6e40" : (prop.price.indexOf("단기") !== -1) ? "#4A148C" : "#2b5c8f";
         
         var itemDiv = document.createElement("div"); 
-        var isVisitedClass = (marker && marker.get("isVisited") === true) ? " visited" : "";
         itemDiv.className = "property-item " + (prop.category === "토지" ? "item-land" : prop.category === "주택" ? "item-house" : "item-factory"); 
         itemDiv.id = "item-" + index;
 
@@ -993,10 +992,7 @@ function selectProperty(index, marker) {
     if (targetItem && targetItem.classList.contains("active")) {
         var savedScrollTop = listContainer ? listContainer.scrollTop : 0;
         targetItem.classList.remove("active"); 
-        targetItem.classList.add("visited");    // 확인 매물 식별용 (은회색 테두리 클래스)
         
-        // 🎯 [마커 은회색 동기화] 마커 객체 장부 및 엘리먼트에 은회색 도장 각인
-        marker.set("isVisited", true);
         if (marker.getElement()) {
             var mBox = marker.getElement().querySelector(".m-box");
             if (mBox) {
@@ -1039,12 +1035,10 @@ function selectProperty(index, marker) {
     // ① 기존 모든 마커의 VIP 절대 권한 즉시 초기화 청소 및 카메라 물리 락 가동
     markers.forEach(function(m) { 
         m.set("isForcedVip", false); 
-        // 🎯 다른 마커들의 VIP 초록색 테두리를 걷어내고 원래 은회색 또는 하늘색 사양으로 복구
         if (m.getElement()) {
             var mBox = m.getElement().querySelector(".m-box");
             if (mBox) {
                 mBox.classList.remove("m-box-vip");
-                if (m.get("isVisited") === true) mBox.classList.add("m-box-visited");
             }
         }
     });
@@ -1054,7 +1048,7 @@ function selectProperty(index, marker) {
     if (marker && marker.getElement()) {
         var mBox = marker.getElement().querySelector(".m-box");
         if (mBox) {
-            mBox.classList.remove("m-box-visited", "m-box-hover");
+            mBox.classList.remove("m-box-hover");
             mBox.classList.add("m-box-vip");
         }
     }
