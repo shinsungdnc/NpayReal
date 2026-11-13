@@ -876,6 +876,7 @@ function applyFilters() {
 
     // 정밀 시야(줌 14 이상) 마커 노출 및 클러스터 타깃 분류 구역
     markers.forEach(function(marker, i) {
+        if (!marker) return;
         var p = properties[i]; 
         if (!marker.get("isActive")) return;
         
@@ -1527,6 +1528,7 @@ document.addEventListener("DOMContentLoaded", function() {
             // 💡 4단계: 줌 레벨 17 이상일 때 화면 안의 모든 활성화 매물 땅 모양 일제히 드로잉
             if (currentZoom >= 17) {
                 markers.forEach(function(m, idx) {
+                    if (!m) return;
                     var prop = properties[idx];
                     if (!m.get("isActive") || !prop || !prop.polygon_wkt || prop.polygon_wkt.indexOf("POLYGON") === -1) return;
                     
