@@ -393,7 +393,7 @@ function initMap() {
                         }
 
                         // 🎯 교정: undefined 에러 원천 차단 (확실하게 VIP가 아닐 때만 닫기)
-                        if (marker.get("isForcedVip") !== true && targetDetail) {
+                        if ((!marker || marker.get("isForcedVip") !== true) && targetDetail) {
                             targetDetail.style.display = "none";
                         }
                     };
@@ -521,7 +521,7 @@ function renderPropertyCards(targetProperties) {
         itemDiv.onmouseenter = function() {
             var targetDetail = document.getElementById("detail-" + index); 
             
-            if (marker.get("isForcedVip") !== true && targetDetail) {
+            if ((!marker || marker.get("isForcedVip") !== true) && targetDetail) {
                 targetDetail.style.display = "block"; // 카드 호버 시 상세페이지 열기
             }
 
@@ -576,7 +576,7 @@ function renderPropertyCards(targetProperties) {
             }
 
             // 🎯 교정: 확실하게 고정 선택된 VIP 본체가 아닐 때만 상세페이지 즉시 닫기
-            if (marker.get("isForcedVip") !== true && targetDetail) {
+            if ((!marker || marker.get("isForcedVip") !== true) && targetDetail) {
                 targetDetail.style.display = "none";
             }
         };
@@ -848,7 +848,7 @@ function applyFilters() {
     if (!isCameraMovingToVip) {
         // 1. 현재 필터를 통과한 정예 매물들의 고유 ID 문자열 배열을 만듭니다.
         var targetIds = listTargetProperties.map(function(t) { return "item-" + t.index; });
-        var hasVip = markers.some(function(m) { return m.get("isForcedVip") === true; });
+        var hasVip = markers.some(function(m) { return m && m.get("isForcedVip") === true; });
 
         // 2. 만약 지도가 이동해서 다른 동네로 완전히 바뀐 상황이라면 목록창을 1회 새로고침(세대교체)합니다.
         var listContainer = document.getElementById("property-list");
@@ -875,6 +875,7 @@ function applyFilters() {
 
     // 정밀 시야(줌 14 이상) 마커 노출 및 클러스터 타깃 분류 구역
     markers.forEach(function(marker, i) {
+        if (!marker) return;
         var p = properties[i]; 
         if (!marker.get("isActive")) return;
         
@@ -901,7 +902,7 @@ function applyFilters() {
 
     var activeVipIndex = -1;
     markers.forEach(function(m, idx) {
-        if (m.get("isForcedVip") === true) { activeVipIndex = idx; }
+        if (m && m.get("isForcedVip") === true) { activeVipIndex = idx; }
     });
 
     if (activeVipIndex > -1) {
@@ -1001,7 +1002,6 @@ function selectProperty(index, marker) {
             var mBox = marker.getElement().querySelector(".m-box");
             if (mBox) {
                 mBox.classList.remove("m-box-vip");
-                mBox.classList.add("m-box-visited");
             }
         }
         
@@ -1038,6 +1038,7 @@ function selectProperty(index, marker) {
 
     // ① 기존 모든 마커의 VIP 절대 권한 즉시 초기화 청소 및 카메라 물리 락 가동
     markers.forEach(function(m) { 
+        if (!m) return;
         m.set("isForcedVip", false); 
         if (m.getElement()) {
             var mBox = m.getElement().querySelector(".m-box");
@@ -1575,7 +1576,7 @@ document.addEventListener("DOMContentLoaded", function() {
         // 💡 줌 인/아웃 연속 조작 시 주변 마커들이 꼬이지 않도록 0.1초 디바운스 가드 고정 유지
         var zoomTimer = null;
         naver.maps.Event.addListener(map, "zoom_changed", function() {
-            var hasActiveVip = markers.some(function(m) { return m.get("isForcedVip") === true; });
+            var hasActiveVip = markers.some(function(m) { return m && m.get("isForcedVip") === true; });
             if (hasActiveVip) return; // 폴리곤 노출 상태일 때는 줌 도중 클러스터러 재조립 연산을 생략하여 중심축 완벽 고정
 
             if (zoomTimer !== null) { clearTimeout(zoomTimer); }
@@ -1589,7 +1590,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         // 지도를 드래그하다가 손을 뗐을 때도 VIP 상태라면 주변 연산을 건너뛰어 자연스러운 정지 보장
         naver.maps.Event.addListener(map, "dragend", function() { 
-            var hasActiveVip = markers.some(function(m) { return m.get("isForcedVip") === true; });
+            var hasActiveVip = markers.some(function(m) { return m && m.get("isForcedVip") === true; });
             if (hasActiveVip) return;
             applyFilters(); 
         });
