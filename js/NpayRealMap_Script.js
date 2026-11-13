@@ -270,6 +270,10 @@ function initMap() {
     // [기획 반영 1] 초기 로딩 시 목록 카드를 생성하지 않고 0개 유지 (DOM 트리 생성 완전 차단)
     // 기존에 이곳에 존재하던 수백 줄의 카드 드로잉(itemDiv 생성) 로직은 하단의 독립 함수로 격리 이동되었습니다.
     properties.forEach(function(prop, index) {
+        if (prop.is_unknown) {
+            markers.push(null);
+            return;
+        }
         var latlng = new naver.maps.LatLng(prop.lat, prop.lng);
         var markerHtml = [
             '<div class="m-box" style="position:absolute; transform:translate(-50%, -100%); margin-top:-65px; background-color:' + prop.bg + '; border:2px solid ' + prop.border + '; opacity:0.98; border-radius:6px; padding:5px 10px; font-weight:bold; font-size:11px; color:#111; white-space:nowrap; box-shadow:0 4px 15px rgba(0,0,0,0.25); text-align:center; line-height:1.3; cursor:pointer;">', 
@@ -521,7 +525,7 @@ function renderPropertyCards(targetProperties) {
                 targetDetail.style.display = "block"; // 카드 호버 시 상세페이지 열기
             }
 
-            if (marker && marker.getElement()) {
+            if (!prop.is_unknown && marker && marker.getElement()) {
                 var mBox = marker.getElement().querySelector(".m-box");
                 if (mBox && marker.get("isForcedVip") !== true) {
                     mBox.classList.add("m-box-hover");
