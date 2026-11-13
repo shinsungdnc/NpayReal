@@ -1217,7 +1217,8 @@ function loadTradeStatsPanel(index) {
                 var rowBg = (sp.key === 'dong') ? 'background: #edf7ff; font-weight: bold;' : '';
                 tableHtml += '<tr><td style="background: #f8f9fa; font-weight: bold; color: #333; border: 1px solid #dee2e6; width: 95px; min-width: 95px; padding: 6px 4px; position: sticky; left: 0; z-index: 5;">' + sp.label + '</td>';
                 bList.forEach(function(dong) { 
-                    tableHtml += '<td style="padding: 6px 4px; border: 1px solid #dee2e6; min-width: 85px; ' + rowBg + '">' + ((dong[sp.key] !== undefined) ? dong[sp.key] : '-') + '</td>'; 
+                    var cellVal = (dong[sp.key] !== undefined) ? String(dong[sp.key]).replace(/근린생활시설/g, '근생') : '-';
+                    tableHtml += '<td style="padding: 6px 4px; border: 1px solid #dee2e6; min-width: 85px; ' + rowBg + '">' + cellVal + '</td>'; 
                 });
                 tableHtml += '</tr>';
             });
@@ -1245,7 +1246,7 @@ function loadTradeStatsPanel(index) {
         if (realTradeStats[prop.town] && realTradeStats[prop.town][mYongdo]) townBook = realTradeStats[prop.town][mYongdo][mJimok];
     } else if (prop.category === "주택") {
         var mDetail = prop.detail_type ? prop.detail_type.trim() : "";
-        if (mDetail.indexOf("단독") !== -1 || mDetail.indexOf("다가구") !== -1) {
+        if (mDetail.indexOf("단독") !== -1 || mDetail.indexOf("전원") !== -1 || mDetail.indexOf("다가구") !== -1) {
             noticeText = '최근 5개년 ' + ((mDetail.indexOf("다가구") !== -1) ? "다가구주택" : "단독주택") + ' [매매] 실거래가 (대지평, 평당가)';
             if (realTradeStats[prop.town] && realTradeStats[prop.town]["단독다가구"]) townBook = realTradeStats[prop.town]["단독다가구"][(mDetail.indexOf("다가구") !== -1) ? "다가구" : "단독"];
         }
