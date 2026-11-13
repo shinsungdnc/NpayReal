@@ -47,18 +47,22 @@ function getActiveTownCenterStats() {
         currentDealTypes.forEach(function(t) { if (p.price && p.price.indexOf(t) !== -1) { mDeal = true; } });
 
         // 🎯 3대 마스터 필터(카테고리, 지목, 용도지역)와 거래방식을 모두 통과한 정예 매물만 숫자를 카운트합니다.
+        // 🎯 [신규] 미지정 좌표(위도/경도) 매물은 통계 수량에는 포함시키되, 중심점 계산에서는 제외합니다.
         if (mCat && mDet && mRegion && mDeal) {
             var tName = p.town;
-            if (!stats[tName]) stats[tName] = { count: 0, sumLat: 0, sumLng: 0, lat: p.lat, lng: p.lng, town_type: p.town_type };
+            if (!stats[tName]) stats[tName] = { count: 0, validCoordCount: 0, sumLat: 0, sumLng: 0, lat: p.lat, lng: p.lng, town_type: p.town_type };
             stats[tName].count++;
-            stats[tName].sumLat += p.lat;
-            stats[tName].sumLng += p.lng;
+            if (!p.is_unknown) {
+                stats[tName].validCoordCount++;
+                stats[tName].sumLat += p.lat;
+                stats[tName].sumLng += p.lng;
+            }
         }
     });
     Object.keys(stats).forEach(function(tName) {
-        if (stats[tName].count > 0) {
-            stats[tName].lat = stats[tName].sumLat / stats[tName].count;
-            stats[tName].lng = stats[tName].sumLng / stats[tName].count;
+        if (stats[tName].validCoordCount > 0) {
+            stats[tName].lat = stats[tName].sumLat / stats[tName].validCoordCount;
+            stats[tName].lng = stats[tName].sumLng / stats[tName].validCoordCount;
         }
     });
     return stats;
@@ -604,7 +608,7 @@ function applyFilters() {
         // 남아있던 순정 클러스터러 완벽 폭파 및 개별 마커 전원 지도 탈착
         if (markerClustering !== null) { markerClustering.setMap(null); markerClustering = null; }
         markers.forEach(function(marker) {
-            marker.setMap(null);
+            if (marker) marker.setMap(null);
         });
 
         // 광역 시야 기존 배지 잔상 완벽 청소
@@ -713,47 +717,41 @@ function applyFilters() {
         var p = properties[i]; 
         if (!p) return;
         
-        // 🛡️ 현재 선택되어 활성화된 VIP 마커 사양 보존
-        if (marker.get("isForcedVip") === true) {
+        if (marker && marker.get("isForcedVip") === true) {
             marker.set("isActive", true);
             listTargetProperties.push({ prop: p, index: i });
             return; 
         }
 
-        // 🛡️ 5대 마스터 필터 동기화 레이어 (지역 선행 -> 지목 후행 순서 매핑 완결)
-        var mCat = (currentCategories.indexOf(marker.get("category")) !== -1);
+        var mCat = (currentCategories.indexOf(p.category) !== -1);
         
-        // 🗺️ 1순위 검사: 용도지역(지역) 매칭 조건식 (지목 필터 조건식과 100% 동일화)
         var mRegion = false;
         if (p.yongdo) {
             var parts = p.yongdo.split("/");
             var currentPRegion = (parts && parts[0] ? parts[0].trim() : "");
-            // 🎯 지목 필터와 동일하게 바구니(currentRegion) 안에 이름이 들어있는지 여부만 판단
             mRegion = (currentRegion.indexOf(currentPRegion) !== -1);
         }
 
-        // 📊 2순위 검사: 소분류(지목) 매칭 조건식
-        var mDet = (currentCategories.length === 0 || currentDetail.indexOf(marker.get("detail_type")) !== -1);
-        
-        // 3순위 이하 행정구역 및 거래방식 검사식 유지
-        var mTown = (currentTown === "전체" || marker.get("town") === currentTown);
+        var mDet = (currentCategories.length === 0 || currentDetail.indexOf(p.detail_type) !== -1);
+        var mTown = (currentTown === "전체" || p.town === currentTown);
         var mRi = (currentRi === "전체" || (p.name && p.name.indexOf(currentRi) !== -1));
         var mDeal = false; 
         currentDealTypes.forEach(function(t) { if (p.price && p.price.indexOf(t) !== -1) mDeal = true; });
 
-        // 🏁 최종 기획 통과 가드 (지역과 지목 조건이 교차 연산됨)
         var isFilterPassed = (mCat && mRegion && mDet && mTown && mRi && mDeal); 
         
-        // ⭕ 기획 구현 핵심 1: 지도 마커의 노출 여부는 순수 필터 통과 여부로만 결정 (경계 해제)
-        marker.set("isActive", isFilterPassed);
-        marker.setMap(null); 
+        if (marker) {
+            marker.set("isActive", isFilterPassed);
+            marker.setMap(null); 
+        }
 
-        // ❌ 기존 'if (currentTown === "전체") { if (p.town === closestTown) ...' 블록을 완전히 삭제하고 
-        // 🎯 아래의 [화면 범위(Bounds) 전수 수집 가드] 딱 한 단락으로 덮어쓰기 교체합니다.
         if (isFilterPassed) {
-            if (currentZoom >= 14) {
+            if (p.is_unknown) {
+                if (currentTown !== "전체" && currentRi === "전체") {
+                    listTargetProperties.push({ prop: p, index: i });
+                }
+            } else if (currentZoom >= 14) {
                 var latLng = marker.getPosition();
-                // 💡 내 4K/모바일 화면 사각형 안에 들어와서 눈에 보이는 마커는 동네 불문 100% 수집!
                 if (currentBounds && currentBounds.hasLatLng(latLng)) {
                     listTargetProperties.push({ prop: p, index: i });
                 }
@@ -973,6 +971,21 @@ function selectProperty(index, marker) {
     
     var prop = properties[index]; 
     if (!prop) return; 
+
+    if (prop.is_unknown || !marker) {
+        var targetItem = document.getElementById("item-" + index);
+        var targetDetail = document.getElementById("detail-" + index);
+        var isAlreadyActive = (targetItem && targetItem.classList.contains("active"));
+
+        document.querySelectorAll(".property-detail").forEach(function(el) { el.style.display = "none"; });
+        document.querySelectorAll(".property-item").forEach(function(el) { el.classList.remove("active"); });
+
+        if (!isAlreadyActive && targetItem) {
+            targetItem.classList.add("active");
+            if (targetDetail) targetDetail.style.display = "block";
+        }
+        return;
+    }
 
     var targetItem = document.getElementById("item-" + index);
 
@@ -1510,6 +1523,7 @@ document.addEventListener("DOMContentLoaded", function() {
             // 💡 4단계: 줌 레벨 17 이상일 때 화면 안의 모든 활성화 매물 땅 모양 일제히 드로잉
             if (currentZoom >= 17) {
                 markers.forEach(function(m, idx) {
+                    if (!m) return;
                     var prop = properties[idx];
                     if (!m.get("isActive") || !prop || !prop.polygon_wkt || prop.polygon_wkt.indexOf("POLYGON") === -1) return;
                     
